@@ -1,6 +1,8 @@
 # MCP Immobilier France (DVF)
 
-Serveur **MCP** qui donne à un agent IA (Claude, Cursor, Codex…) l'accès aux **prix et transactions immobilières réels en France**, à partir des **données ouvertes officielles DVF** (Demandes de Valeurs Foncières, Etalab / data.gouv.fr).
+[![MCPize](https://mcpize.com/badge/@contact.agentia1984/immobilier-france)](https://mcpize.com/mcp/immobilier-france)
+
+> Serveur **MCP** qui donne à un agent IA (Claude, Cursor, Codex…) l'accès aux **prix et transactions immobilières réels en France**, à partir des **données ouvertes officielles DVF** (Demandes de Valeurs Foncières, Etalab / data.gouv.fr).
 
 > 100 % open data, **gratuit, sans clé d'API, sans inscription**. Aucune dépendance payante.
 >
@@ -39,6 +41,16 @@ uv venv && uv pip install -r requirements.txt
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## Connect via MCPize
+
+Use this MCP server instantly with no local installation:
+
+```bash
+npx -y mcpize connect @contact.agentia1984/immobilier-france --client claude
+```
+
+Or connect at: **https://mcpize.com/mcp/immobilier-france**
 
 ## ▶️ Lancer le serveur
 
