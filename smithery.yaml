@@ -1,0 +1,10 @@
+# Déploiement sur Smithery (serveur MCP local, transport stdio).
+# Voir https://smithery.ai/docs pour le format à jour si besoin.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+    required: []
+  commandFunction: |-
+    (config) => ({ command: "python", args: ["server.py"] })
