@@ -22,7 +22,7 @@ from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
-
+from mcp.server.transport_security import TransportSecuritySettings
 import dvf_core as core
 
 GEO_DVF_BASE = "https://files.data.gouv.fr/geo-dvf/latest/csv"
@@ -31,7 +31,7 @@ BAN_API = "https://api-adresse.data.gouv.fr"
 USER_AGENT = "AgentIA-MCP-Immobilier-DVF/1.0 (+https://agentia)"
 TIMEOUT = 30.0
 
-mcp = FastMCP("immobilier-dvf")
+mcp = FastMCP("immobilier-dvf", transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
 
 _client = httpx.Client(
     timeout=TIMEOUT, follow_redirects=True, headers={"User-Agent": USER_AGENT}
