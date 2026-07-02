@@ -25,12 +25,18 @@ async function runHttp(): Promise<void> {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 
-  // Lightweight health check for hosting platforms.
+  // Health + startup-probe endpoints. Hosting platforms (e.g. MCPize / Cloud
+  // Run) probe "/ping" on startup — it must return 200 or the deploy fails.
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", server: SERVER_NAME, version: SERVER_VERSION });
   });
+  app.get("/ping", (_req: Request, res: Response) => {
+    res.status(200).send("ok");
+  });
 
-  app.post("/mcp", async (req: Request, res: Response) => {
+  // MCP request handler (stateless). Mounted on BOTH "/" and "/mcp" so the
+  // hosting HTTP bridge reaches it regardless of which path it posts to.
+  const mcpHandler = async (req: Request, res: Response): Promise<void> => {
     // Optional API-key gate for the hosted (paid) deployment.
     if (SERVER_API_KEY && req.header("x-api-key") !== SERVER_API_KEY) {
       res.status(401).json({
@@ -64,7 +70,9 @@ async function runHttp(): Promise<void> {
         });
       }
     }
-  });
+  };
+  app.post("/mcp", mcpHandler);
+  app.post("/", mcpHandler);
 
   const port = parseInt(process.env.PORT || "3000", 10);
   app.listen(port, () => {
