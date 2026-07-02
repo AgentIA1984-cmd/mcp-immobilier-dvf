@@ -1,0 +1,1 @@
+{"version":3,"file":"ban.d.ts","sourceRoot":"","sources":["../../src/services/ban.ts"],"names":[],"mappings":"AAOA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,aAAa,CAAC;AAkB/C;;;;GAIG;AACH,wBAAsB,cAAc,CAClC,KAAK,EAAE,MAAM,EACb,KAAK,EAAE,MAAM,GACZ,OAAO,CAAC,WAAW,EAAE,CAAC,CAoBxB;AAED,kEAAkE;AAClE,wBAAsB,WAAW,CAAC,KAAK,EAAE,MAAM,GAAG,OAAO,CAAC,WAAW,GAAG,IAAI,CAAC,CAG5E"}

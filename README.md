@@ -1,110 +1,115 @@
-# MCP Immobilier France (DVF)
+# france-property-mcp-server
 
-Serveur **MCP** qui donne à un agent IA (Claude, Cursor, Codex…) l'accès aux **prix et transactions immobilières réels en France**, à partir des **données ouvertes officielles DVF** (Demandes de Valeurs Foncières, Etalab / data.gouv.fr).
+MCP server for **French real-estate intelligence**, built entirely on **open French government data**:
 
-> 100 % open data, **gratuit, sans clé d'API, sans inscription**. Aucune dépendance payante.
->
-> 🇫🇷 **Couvre toute la France** — n'importe quelle commune, n'importe quelle adresse (métropole + DOM). C'est un produit **national**, vendable partout. Les villes citées en exemple ne sont que des illustrations.
+- **Base Adresse Nationale (BAN)** — address geocoding → coordinates + INSEE code.
+- **DVF (Demandes de Valeurs Foncières)** — recorded property sale transactions since 2010.
 
----
-
-## 🔧 Les 6 outils
-
-| Outil | Ce qu'il fait |
-|---|---|
-| `rechercher_commune` | Trouve le code INSEE d'une ville (à utiliser en premier si on ne le connaît pas). |
-| `prix_immobilier` | Prix au m² d'une commune : médiane, moyenne, quartiles, min/max, nb de ventes. |
-| `transactions` | Liste des ventes récentes (date, type, surface, pièces, prix, prix/m²). |
-| `transactions_autour_adresse` | Ventes comparables autour d'une adresse (rayon en mètres). |
-| `estimer_bien` | Estime un bien par comparaison avec les ventes proches (fourchette + fiabilité). |
-| `tendance_prix` | Évolution du prix au m² médian sur plusieurs années (+ variation %). |
-
-**Exemples de questions auxquelles l'agent saura répondre (partout en France) :**
-- « Quel est le prix au m² des appartements à Lyon ? »
-- « Estime une maison de 90 m² à Bordeaux, 12 rue Sainte-Catherine. »
-- « Montre-moi les 10 dernières ventes autour du 4 place Bellecour à Lyon, rayon 800 m. »
-- « Comment ont évolué les prix à Nantes sur 4 ans ? »
+It turns raw open data into agent-usable tools: geocoding, sale history, **comparable-based price estimation**, and **commune market statistics with a year-over-year trend**. This is the sellable v1 of the AgentIA *Off-Market Property Radar* MCP; the pure off-market lead layer (successions, saisies, ventes notariales) is a premium roadmap item — see [Roadmap](#roadmap).
 
 ---
 
-## 📦 Installation
+## Tools
 
-Prérequis : **Python 3.10+**.
+| Tool | What it does | Key inputs |
+|---|---|---|
+| `fr_property_geocode` | Resolve a French address to lat/lon + INSEE code | `address`, `limit` |
+| `fr_property_transactions` | List DVF sales near an address / in a commune | `address` or `citycode`, `radius_m`, `property_type`, `since_year`, `min_rooms`, `max_rooms`, `limit` |
+| `fr_property_price_estimate` | Estimate a property's value from comparables (median €/m² × surface, p25–p75 range, confidence) | `address`, `surface_m2`, `property_type`, `radius_m`, `years_back` |
+| `fr_property_market_stats` | Commune median/p25/p75 €/m², volume, YoY trend | `address` or `citycode`, `property_type`, `years_back` |
+
+All tools are read-only, support `response_format: "markdown" | "json"`, and return both text and `structuredContent`.
+
+---
+
+## Quickstart
 
 ```bash
-# avec uv (recommandé)
-uv venv && uv pip install -r requirements.txt
+npm install
+npm run build
 
-# ou avec pip
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+# Local (stdio) — for Claude Desktop, Cursor, etc.
+npm start
+
+# Remote (HTTP) — for hosted deployment
+TRANSPORT=http PORT=3000 npm start
 ```
 
-## ▶️ Lancer le serveur
-
-```bash
-python server.py      # transport stdio
-```
-
-## 🔌 Brancher dans un client MCP
-
-**Claude Desktop / Claude Code / Cursor** — ajouter dans la config MCP :
+### Connect to a local MCP client (stdio)
 
 ```json
 {
   "mcpServers": {
-    "immobilier-dvf": {
-      "command": "python",
-      "args": ["/chemin/absolu/vers/server.py"]
+    "france-property": {
+      "command": "node",
+      "args": ["/absolute/path/to/france-property-mcp-server/dist/index.js"]
     }
   }
 }
 ```
 
-(Adapter `command` à `python3` ou au binaire de votre venv si besoin.)
-
-## ✅ Tester
+### Test the HTTP transport
 
 ```bash
-# tests de la logique (hors-ligne, sans réseau)
-python test_dvf_core.py
-
-# test réel SANS Node (recommandé) — appelle les outils en direct (réseau requis)
-python smoke_test.py
-
-# (option) via l'inspecteur MCP officiel — nécessite Node.js
-npx @modelcontextprotocol/inspector python server.py
-# Puis, DANS l'interface web de l'inspecteur (onglet « Tools »), choisir un outil
-# et le lancer, par ex. prix_immobilier avec commune="Lyon".
-# ⚠️ prix_immobilier(...) n'est PAS une commande à taper dans le terminal.
+curl -s -X POST http://localhost:3000/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"c","version":"1.0.0"}}}'
 ```
 
----
-
-## 🛰️ Sources de données (toutes officielles et gratuites)
-
-- **Transactions** : géo-DVF — `https://files.data.gouv.fr/geo-dvf/latest/csv/{année}/communes/{dep}/{insee}.csv`
-- **Communes** (nom → INSEE) : `https://geo.api.gouv.fr/communes`
-- **Géocodage d'adresse** (BAN) : `https://api-adresse.data.gouv.fr/search`
-
-**Bon à savoir**
-- Les données DVF couvrent les ventes jusqu'à l'**année civile précédente** (mise à jour ~2×/an). Le serveur prend par défaut la dernière année disponible.
-- Le **prix au m²** est calculé en rapportant la valeur foncière de la mutation à la surface bâtie résidentielle, avec un filtre anti-aberrations (200–30 000 €/m²). C'est une mesure robuste mais **indicative** (une mutation peut mêler plusieurs lots/terrains).
-- Couverture : France métropolitaine + DOM. L'**Alsace-Moselle (57, 67, 68)** et **Mayotte** ne sont pas dans DVF (cadastre/registre différent).
+> **Note on networking:** the tools call `api-adresse.data.gouv.fr` (BAN) and the DVF API. These are public and work from any normal host. In restricted sandboxes with egress filtering you may see `Error: upstream API returned status 403` — that is the sandbox, not the server.
 
 ---
 
-## 💰 Mettre en vente
+## Configuration (env)
 
-- **Smithery** : `smithery.yaml` fourni (déploiement stdio). Pousser le dépôt et suivre smithery.ai/docs.
-- **MCPize** : héberger le serveur et facturer à l'appel (per-call / abo).
-- **Capafy / Agensi** : packager comme skill « connecteur immobilier ».
-- Pensez à un **listing soigné** (titre, description, exemples de prompts ci-dessus) et à le **rafraîchir mensuellement** (les marketplaces classent mieux les listings actifs).
+| Variable | Default | Purpose |
+|---|---|---|
+| `TRANSPORT` | `stdio` | `stdio` or `http` |
+| `PORT` | `3000` | HTTP port |
+| `BAN_API_BASE` | `https://api-adresse.data.gouv.fr` | Geocoding endpoint |
+| `DVF_API_BASE` | `https://api.cquest.org/dvf` | DVF transactions endpoint |
+| `SERVER_API_KEY` | *(empty)* | If set, HTTP clients must send header `x-api-key` |
 
-## ⚠️ Avertissement
+---
 
-Données publiques fournies « en l'état ». Les estimations sont **indicatives**, basées sur des ventes passées, et ne tiennent pas compte de l'état, de l'étage ou des prestations du bien. Elles ne remplacent pas une expertise immobilière.
+## Deploying it *to sell*
 
-## 📄 Licence
+An MCP is sold as a **hosted service** whose tool-calls are billed — not as a downloadable file.
 
-MIT — réutilisation libre. Données DVF sous Licence Ouverte (Etalab).
+1. **MCPize** (recommended) — publish the server; the platform handles hosting, SSL, Stripe checkout, license keys, analytics (≈85/15 revenue share). Set `TRANSPORT=http` and, if you gate access yourself, `SERVER_API_KEY`.
+2. **Apify** — first-class MCP hosting with usage events (≈80% net). Wrap `dist/index.js` as the actor entry.
+3. **Visibility (no payment):** list on Glama, mcp.so, PulseMCP, Smithery for discovery/SEO.
+
+A `/health` endpoint and an optional `x-api-key` gate are included for hosting platforms.
+
+### Suggested pricing
+- **Freemium**: geocode + a few transaction lookups free.
+- **Pro subscription**: €19–39/mo for unlimited `price_estimate` + `market_stats` (the value tools).
+- **Per-call**: for API/agent buyers who prefer usage-based billing.
+
+---
+
+## ⚠️ Production reliability — data sourcing (the key risk)
+
+The default `DVF_API_BASE` (`api.cquest.org/dvf`) is a community proof-of-concept with **no availability guarantee**. Before selling, do one of:
+
+- **Self-host** the micro-API from <https://github.com/cquest/dvf_as_api> and point `DVF_API_BASE` at it (cheap, removes the dependency), or
+- Point `DVF_API_BASE` at a **DVF+ provider** (Cerema/SOGEFI "API données foncières" on data.gouv.fr).
+
+The DVF client normalizes several field-name variants, so most providers work by swapping the base URL. Data is under the **Licence Ouverte / Etalab** (attribution required).
+
+---
+
+## Roadmap (premium "off-market" layer)
+
+- Ventes notariales / successions / saisies feeds (higher willingness-to-pay).
+- Cadastre parcel lookup (`apicarto.ign.fr`) and DPE energy label (ADEME) enrichment.
+- Rental-yield estimation (combine sale €/m² with rent references).
+- Alerting webhook (new matching sale in a saved zone).
+
+---
+
+## Disclaimer
+
+`fr_property_price_estimate` returns a **statistical estimate** from public comparable sales — it is **not** a certified valuation (expertise immobilière). Verify before any transaction decision.
