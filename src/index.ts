@@ -75,7 +75,7 @@ async function runHttp(): Promise<void> {
   app.post("/", mcpHandler);
 
   const port = parseInt(process.env.PORT || "3000", 10);
-  app.listen(port, () => {
+  app.listen(port, "0.0.0.0", () => {
     console.error(
       `${SERVER_NAME} v${SERVER_VERSION} running on http://localhost:${port}/mcp`
     );
