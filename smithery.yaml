@@ -1,0 +1,10 @@
+# Deploiement MCP heberge (MCPize / Smithery) - transport HTTP Streamable.
+# Projet Node/TypeScript : point d'entree = dist/index.js (compile depuis src/).
+startCommand:
+  type: http
+  configSchema:
+    type: object
+    properties: {}
+    required: []
+  commandFunction: |-
+    (config) => ({ command: "node", args: ["dist/index.js"], env: { TRANSPORT: "http", PORT: String(process.env.PORT || 8000) } })
